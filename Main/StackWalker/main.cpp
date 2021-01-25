@@ -641,6 +641,6 @@ int main(int argc, _TCHAR* argv[])
 
   //CreateGraphAndJSON(gCallTrees);
   //CollectCallStackForDifferentProcess();
-  TestDifferentProcess(3588);
+  TestDifferentProcess(6588);
   return 0;
 }

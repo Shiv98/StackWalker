@@ -1,0 +1,69 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.5"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "StackWalker-project",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "StackWalker::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-StackWalker-Debug-bb968dd70a956560ffa2.json",
+					"name" : "StackWalker",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "StackWalker_test::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-StackWalker_test-Debug-015e53fd9f51b8d8e6b5.json",
+					"name" : "StackWalker_test",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Users/ShGupta/source/repos/Shiv98/StackWalker/out/build/x64-Debug (default)",
+		"source" : "C:/Users/ShGupta/source/repos/Shiv98/StackWalker"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 1
+	}
+}
