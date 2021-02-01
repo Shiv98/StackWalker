@@ -98,7 +98,7 @@ DWORD WINAPI StartProfile(LPVOID lpParam)
   //HANDLE tHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, tid);
   
 
-  for (size_t j = 0; j < 2; j++)
+  for (size_t j = 0; j < 5; j++)
   {
     for (int i = 0; i < THREADCOUNT; i++)
     {
@@ -461,5 +461,6 @@ int main(int argc, _TCHAR* argv[])
   WaitForProfilerThread();
 
   CreateGraphAndJSON(gCallTrees);
+  WaitForAllThreads();
   return 0;
 }
