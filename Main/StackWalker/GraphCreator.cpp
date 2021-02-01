@@ -1,5 +1,6 @@
 #include "GraphCreator.h"
 #include <fstream>
+#include <iostream>
 #include <set>
 
 std::ofstream JSONFile;
@@ -89,6 +90,7 @@ CallTreeNode SetPercentages(CallTreeNode* root, int rootSampleCount)
 
 CallTreeNode MergeNodes(CallTreeNode* root)
 {
+
   /*
     root ---->n1->n2->n3
            -->n1->n2->n3
@@ -96,7 +98,15 @@ CallTreeNode MergeNodes(CallTreeNode* root)
     Merge branches and set count on the duplicate nodes.
     */
 
-  std::set<std::string> funcSet = CreateSetOfChildren(root->children);
+  std::set<std::string>funcSet = CreateSetOfChildren(root->children);
+  /*std::set<std::string>::iterator itr;
+  for (itr = funcSet.begin(); itr != funcSet.end(); itr++)
+  {
+    std::cout << *itr << " ";
+  }
+  std::cout << "\n";
+  std::cout << "funcSet.size()" << funcSet.size() << "  root->children.size()"
+            << root->children.size() << "\n";*/
 
   if (funcSet.size() != root->children.size())
   {
@@ -132,8 +142,13 @@ CallTreeNode MergeNodes(CallTreeNode* root)
           adoptedChild->parents.push_back(*node);
           node->AddChild(*adoptedChild);
         }
-        root->children.erase(root->children.begin() + i);
+        //root->children.erase(root->children.begin() + i);
       }
+      for (size_t i = duplicateIndices.size(); i >=1; i++)
+      {
+        root->children.erase(root->children.begin() + duplicateIndices[i]);
+      }
+      duplicateIndices.clear();
     }
   }
 

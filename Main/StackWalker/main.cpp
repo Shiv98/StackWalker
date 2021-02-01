@@ -38,7 +38,7 @@ HANDLE ListProcessThreads(DWORD dwOwnerPID);
 void   printError(TCHAR* msg);
 HANDLE GetMainThreadId(DWORD PID);
 void   Func1();
-void   StackWalkTest(HANDLE threadHandle, std::string threadName);
+void   StackWalkTest(DWORD pid, HANDLE threadHandle, std::string threadName);
 
 // secure-CRT_functions are only available starting with VC8
 #if _MSC_VER < 1400
@@ -93,16 +93,21 @@ DWORD WINAPI StartProfile(LPVOID lpParam)
   UNREFERENCED_PARAMETER(lpParam);
 
   HANDLE thread = GetCurrentThread();
+  DWORD tid =16348;
+  DWORD  pid = 16520;
+  HANDLE tHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, tid);
+  
 
-  for (size_t j = 0; j < 2; j++)
+  for (size_t j = 0; j < 5; j++)
   {
-    for (int i = 0; i < THREADCOUNT; i++)
-    {
+    //for (int i = 0; i < THREADCOUNT; i++)
+    //{
       /*char* intStr = (char*)malloc(2);
       intStr = itoa(i, intStr, 0);*/
       //sprintf(threadName, "%d", i);
-      StackWalkTest(ghThreads[i], std::to_string(i));
-    }
+      //StackWalkTest(pid,tHandle, "TID");
+      StackWalkTest(pid, tHandle, std::to_string(j));
+    //}
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   return 0;
@@ -153,9 +158,10 @@ void CreateProfilerThread()
   }
 }
 
-void Func5(HANDLE threadHandle, std::string threadName)
+void Func5(DWORD pid, HANDLE threadHandle, std::string threadName)
 {
-  StackWalkerToConsole sw;
+  HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+  StackWalker sw(pid, hProcess);
   SuspendThread(threadHandle);
   CONTEXT c;
   memset(&c, 0, sizeof(CONTEXT));
@@ -380,9 +386,9 @@ void Func1()
   //Func5();
 }
 
-void StackWalkTest(HANDLE threadHandle, std::string threadName)
+void StackWalkTest(DWORD pid, HANDLE threadHandle, std::string threadName)
 {
-  Func5(threadHandle, threadName);
+  Func5(pid, threadHandle, threadName);
 }
 
 void GlobalIntTest()
@@ -504,55 +510,7 @@ static void InitUnhandledExceptionFilter()
 }
 #endif // UNHANDLED_EXCEPTION_TEST
 
-#ifdef EXCEPTION_FILTER_TEST
-LONG WINAPI ExpFilter(EXCEPTION_POINTERS* pExp, DWORD dwExpCode)
-{
-  //StackWalker sw;  // output to default (Debug-Window)
-  StackWalkerToConsole sw; // output to the console
-  sw.ShowCallstack(GetCurrentThread(), pExp->ContextRecord);
-  return EXCEPTION_EXECUTE_HANDLER;
-}
-void ExpTest5()
-{
-  char* p = NULL;
-  p[0] = 0;
-  printf(p);
-}
-void ExpTest4()
-{
-  ExpTest5();
-}
-void ExpTest3()
-{
-  ExpTest4();
-}
-void ExpTest2()
-{
-  ExpTest3();
-}
-void ExpTest1()
-{
-  ExpTest2();
-}
-void TestExceptionWalking()
-{
-  __try
-  {
-    ExpTest1();
-  }
-  __except (ExpFilter(GetExceptionInformation(), GetExceptionCode()))
-  {
-    printf("\n\nException-Handler called\n\n\n");
-  }
-}
 
-int f(int i)
-{
-  if (i < 0)
-    return i;
-  return f(i + 1);
-}
-#endif // EXCEPTION_FILTER_TEST
 
 //void map_custom_class_example();
 
@@ -634,13 +592,13 @@ int main(int argc, _TCHAR* argv[])
   //printf("\n\n\nShow a simple callstack of the current thread:\n\n\n");
   //CreateMultipleThreads(); // Create these as a placeholder for LV threads.
 
-  //CreateProfilerThread();
+  CreateProfilerThread();
 
-  ////WaitForAllThreads();
-  //WaitForProfilerThread();
+  //WaitForAllThreads();
+  WaitForProfilerThread();
 
-  //CreateGraphAndJSON(gCallTrees);
+  CreateGraphAndJSON(gCallTrees);
   //CollectCallStackForDifferentProcess();
-  TestDifferentProcess(6588);
+  //TestDifferentProcess(16440);
   return 0;
 }
