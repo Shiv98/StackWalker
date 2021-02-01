@@ -144,7 +144,7 @@ CallTreeNode MergeNodes(CallTreeNode* root)
         }
         //root->children.erase(root->children.begin() + i);
       }
-      for (size_t i = duplicateIndices.size(); i >=1; i++)
+      for (size_t i = duplicateIndices.size(); i >=1; i--)
       {
         root->children.erase(root->children.begin() + duplicateIndices[i]);
       }
@@ -177,7 +177,7 @@ CallTreeNode* CreateTree(std::string key, std::vector<std::vector<std::string>> 
   }
 
   // Merge nodes in branch.
-  *root = MergeNodes(root);
+  //*root = MergeNodes(root);
 
   *root = SetPercentages(root, root->count);
 

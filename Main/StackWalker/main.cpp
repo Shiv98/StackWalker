@@ -38,7 +38,7 @@ HANDLE ListProcessThreads(DWORD dwOwnerPID);
 void   printError(TCHAR* msg);
 HANDLE GetMainThreadId(DWORD PID);
 void   Func1();
-void   StackWalkTest(DWORD pid, HANDLE threadHandle, std::string threadName);
+void StackWalkTest(HANDLE threadHandle, std::string threadName);
 
 // secure-CRT_functions are only available starting with VC8
 #if _MSC_VER < 1400
@@ -93,21 +93,21 @@ DWORD WINAPI StartProfile(LPVOID lpParam)
   UNREFERENCED_PARAMETER(lpParam);
 
   HANDLE thread = GetCurrentThread();
-  DWORD tid =16348;
-  DWORD  pid = 16520;
-  HANDLE tHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, tid);
+  //DWORD tid =16348;
+  //DWORD  pid = 16520;
+  //HANDLE tHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, tid);
   
 
-  for (size_t j = 0; j < 5; j++)
+  for (size_t j = 0; j < 2; j++)
   {
-    //for (int i = 0; i < THREADCOUNT; i++)
-    //{
+    for (int i = 0; i < THREADCOUNT; i++)
+    {
       /*char* intStr = (char*)malloc(2);
       intStr = itoa(i, intStr, 0);*/
       //sprintf(threadName, "%d", i);
       //StackWalkTest(pid,tHandle, "TID");
-      StackWalkTest(pid, tHandle, std::to_string(j));
-    //}
+      StackWalkTest(ghThreads[i], std::to_string(i));
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   return 0;
@@ -158,14 +158,16 @@ void CreateProfilerThread()
   }
 }
 
-void Func5(DWORD pid, HANDLE threadHandle, std::string threadName)
+void Func5(HANDLE threadHandle, std::string threadName)
 {
-  HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+  /*HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
   StackWalker sw(pid, hProcess);
   SuspendThread(threadHandle);
   CONTEXT c;
   memset(&c, 0, sizeof(CONTEXT));
   c.ContextFlags = CONTEXT_FULL;
+  
+
 
   // TODO: Detect if you want to get a thread context of a different process, which is running a different processor architecture...
   // This does only work if we are x64 and the target process is x64 or x86;
@@ -181,6 +183,39 @@ void Func5(DWORD pid, HANDLE threadHandle, std::string threadName)
     // GetCurrentEC - for executing thread - from this, get DSP and VI name -- Make this root of this sub-tree.
     // Merge this sub-tree with the main tree.
     // Secondary storage for the info.
+
+    if (gCallTrees.find(threadName) != gCallTrees.end())
+    {
+      auto value = gCallTrees[threadName];
+      value.push_back(sw.callStackList);
+      gCallTrees.erase(threadName);
+      gCallTrees.insert({threadName, value});
+
+      int currentCount = gFunctionCounts[threadName];
+      gFunctionCounts.erase(threadName);
+      gFunctionCounts.insert({threadName, currentCount + 1});
+    }
+    else
+    {
+      std::vector<std::vector<std::string>> newValue;
+      newValue.push_back(sw.callStackList);
+      gCallTrees.insert({threadName, newValue});
+
+      gFunctionCounts.insert({threadName, 1});
+    }
+  }
+
+  ResumeThread(threadHandle);*/
+  StackWalkerToConsole sw;
+  SuspendThread(threadHandle);
+  CONTEXT c;
+  memset(&c, 0, sizeof(CONTEXT));
+  c.ContextFlags = CONTEXT_FULL;
+  if (GetThreadContext(threadHandle, &c) != FALSE)
+  {
+    sw.gLogFile << "\"" << threadName << "\":[";
+    sw.ShowCallstack(threadHandle, &c);
+    sw.gLogFile << "]";
 
     if (gCallTrees.find(threadName) != gCallTrees.end())
     {
@@ -348,7 +383,7 @@ void printError(TCHAR* msg)
 
 void Func6()
 {
-  std::cout << "Blah blah" << std::endl;
+  std::cout << " Blah blah" << std::endl;
 }
 
 void Func4()
@@ -358,9 +393,9 @@ void Func4()
 
 void Func3()
 {
-  for (size_t i = 0; i < 200; i++)
+  for (size_t i = 0; i < 50; i++)
   {
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(200));
     std::cout << i;
   }
   Func4();
@@ -368,27 +403,25 @@ void Func3()
 
 void Func2()
 {
-  for (size_t i = 0; i < 200; i++)
+  for (size_t i = 0; i < 50; i++)
   {
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(200));
     Func3();
   }
-  //Func5();
 }
 
 void Func1()
 {
-  for (size_t i = 0; i < 200; i++)
+  for (size_t i = 0; i < 50; i++)
   {
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(200));
     Func2();
   }
-  //Func5();
 }
 
-void StackWalkTest(DWORD pid, HANDLE threadHandle, std::string threadName)
+void StackWalkTest(HANDLE threadHandle, std::string threadName)
 {
-  Func5(pid, threadHandle, threadName);
+  Func5(threadHandle, threadName);
 }
 
 void GlobalIntTest()
@@ -403,117 +436,6 @@ void GlobalFunctionPointerTest()
   sw.ShowObject(&pGlobalFuncPtr);
 }
 
-#ifdef UNHANDLED_EXCEPTION_TEST
-
-// For more info about "PreventSetUnhandledExceptionFilter" see:
-// "SetUnhandledExceptionFilter" and VC8
-// http://blog.kalmbachnet.de/?postid=75
-// and
-// Unhandled exceptions in VC8 and above… for x86 and x64
-// http://blog.kalmbach-software.de/2008/04/02/unhandled-exceptions-in-vc8-and-above-for-x86-and-x64/
-// Even better: http://blog.kalmbach-software.de/2013/05/23/improvedpreventsetunhandledexceptionfilter/
-
-#if defined(_M_X64) || defined(_M_IX86)
-static BOOL PreventSetUnhandledExceptionFilter()
-{
-  HMODULE hKernel32 = LoadLibrary(_T("kernel32.dll"));
-  if (hKernel32 == NULL)
-    return FALSE;
-  void* pOrgEntry = GetProcAddress(hKernel32, "SetUnhandledExceptionFilter");
-  if (pOrgEntry == NULL)
-    return FALSE;
-
-#ifdef _M_IX86
-  // Code for x86:
-  // 33 C0                xor         eax,eax
-  // C2 04 00             ret         4
-  unsigned char szExecute[] = {0x33, 0xC0, 0xC2, 0x04, 0x00};
-#elif _M_X64
-  // 33 C0                xor         eax,eax
-  // C3                   ret
-  unsigned char szExecute[] = {0x33, 0xC0, 0xC3};
-#else
-#error "The following code only works for x86 and x64!"
-#endif
-
-  DWORD dwOldProtect = 0;
-  BOOL  bProt = VirtualProtect(pOrgEntry, sizeof(szExecute), PAGE_EXECUTE_READWRITE, &dwOldProtect);
-
-  SIZE_T bytesWritten = 0;
-  BOOL   bRet = WriteProcessMemory(GetCurrentProcess(), pOrgEntry, szExecute, sizeof(szExecute),
-                                 &bytesWritten);
-
-  if ((bProt != FALSE) && (dwOldProtect != PAGE_EXECUTE_READWRITE))
-  {
-    DWORD dwBuf;
-    VirtualProtect(pOrgEntry, sizeof(szExecute), dwOldProtect, &dwBuf);
-  }
-  return bRet;
-}
-#else
-#pragma message("This code works only for x86 and x64!")
-#endif
-
-static TCHAR s_szExceptionLogFileName[_MAX_PATH] = _T("\\exceptions.log"); // default
-static BOOL  s_bUnhandledExeptionFilterSet = FALSE;
-static LONG __stdcall CrashHandlerExceptionFilter(EXCEPTION_POINTERS* pExPtrs)
-{
-#ifdef _M_IX86
-  if (pExPtrs->ExceptionRecord->ExceptionCode == EXCEPTION_STACK_OVERFLOW)
-  {
-    static char MyStack[1024 * 128]; // be sure that we have enough space...
-    // it assumes that DS and SS are the same!!! (this is the case for Win32)
-    // change the stack only if the selectors are the same (this is the case for Win32)
-    //__asm push offset MyStack[1024*128];
-    //__asm pop esp;
-    __asm mov eax, offset MyStack[1024 * 128];
-    __asm mov esp, eax;
-  }
-#endif
-
-  StackWalkerToConsole sw; // output to console
-  sw.ShowCallstack(GetCurrentThread(), pExPtrs->ContextRecord);
-  TCHAR lString[500];
-  _stprintf_s(lString,
-              _T("*** Unhandled Exception! See console output for more infos!\n")
-              _T("   ExpCode: 0x%8.8X\n")
-              _T("   ExpFlags: %d\n")
-#if _MSC_VER >= 1900
-              _T("   ExpAddress: 0x%8.8p\n")
-#else
-              _T("   ExpAddress: 0x%8.8X\n")
-#endif
-              _T("   Please report!"),
-              pExPtrs->ExceptionRecord->ExceptionCode, pExPtrs->ExceptionRecord->ExceptionFlags,
-              pExPtrs->ExceptionRecord->ExceptionAddress);
-  FatalAppExit(-1, lString);
-  return EXCEPTION_CONTINUE_SEARCH;
-}
-
-static void InitUnhandledExceptionFilter()
-{
-  TCHAR szModName[_MAX_PATH];
-  if (GetModuleFileName(NULL, szModName, sizeof(szModName) / sizeof(TCHAR)) != 0)
-  {
-    _tcscpy_s(s_szExceptionLogFileName, szModName);
-    _tcscat_s(s_szExceptionLogFileName, _T(".exp.log"));
-  }
-  if (s_bUnhandledExeptionFilterSet == FALSE)
-  {
-    // set global exception handler (for handling all unhandled exceptions)
-    SetUnhandledExceptionFilter(CrashHandlerExceptionFilter);
-#if defined _M_X64 || defined _M_IX86
-    PreventSetUnhandledExceptionFilter();
-#endif
-    s_bUnhandledExeptionFilterSet = TRUE;
-  }
-}
-#endif // UNHANDLED_EXCEPTION_TEST
-
-
-
-//void map_custom_class_example();
-
 // Simple implementation of an additional output to the console:
 class MyStackWalker : public StackWalker
 {
@@ -527,70 +449,11 @@ public:
   }
 };
 
-// Test for callstack of threads for an other process:
-void TestDifferentProcess(DWORD dwProcessId) // copied from demo project.
-{
-  HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, dwProcessId);
-
-  if (hProcess == NULL)
-    return;
-
-  HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPALL, dwProcessId);
-  if (hSnap == INVALID_HANDLE_VALUE)
-    return;
-
-  THREADENTRY32 te;
-  memset(&te, 0, sizeof(te));
-  te.dwSize = sizeof(te);
-  if (Thread32First(hSnap, &te) == FALSE)
-  {
-    CloseHandle(hSnap);
-    return;
-  }
-
-  // Initialize StackWalker...
-  MyStackWalker sw(dwProcessId, hProcess);
-  sw.LoadModules();
-  // now enum all thread for this processId
-  do
-  {
-    if (te.th32OwnerProcessID != dwProcessId)
-      continue;
-    HANDLE hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, te.th32ThreadID);
-    if (hThread == NULL)
-      continue;
-    char szTemp[100];
-    sprintf(szTemp, "\r\nThreadID: %d\r\n", te.th32ThreadID);
-    sw.OnOutput(szTemp); // output the threadId
-    /*CONTEXT c;
-    memset(&c, 0, sizeof(CONTEXT));
-    c.ContextFlags = CONTEXT_FULL;
-    SuspendThread(hThread);
-    if (GetThreadContext(hThread, &c) != FALSE)
-    {*/
-    sw.ShowCallstack(hThread); //, &c); // Without passing context, it says filename not available, but shows filename, function name, line number.
-    /*}
-    ResumeThread(hThread);*/
-    CloseHandle(hThread);
-  } while (Thread32Next(hSnap, &te) != FALSE);
-}
-
-//void CollectCallStackForDifferentProcess()
-//{
-//  DWORD pid = 22296;
-//  HANDLE processHandle = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
-//
-//  DWORD  tid = 22296;
-//  HANDLE threadHandle = OpenThread(, TRUE, tid);
-//  //StackWalker sw(63, "C:\\LWOL\\Stuff\\Profiler\\Process\\ProfilerTarget\\Debug", pid, processHandle);
-//  StackWalker sw(pid, processHandle);
-//  sw.ShowCallstack();
-//}
 
 int main(int argc, _TCHAR* argv[])
 {
   //printf("\n\n\nShow a simple callstack of the current thread:\n\n\n");
-  //CreateMultipleThreads(); // Create these as a placeholder for LV threads.
+  CreateMultipleThreads(); // Create these as a placeholder for LV threads.
 
   CreateProfilerThread();
 
@@ -598,7 +461,5 @@ int main(int argc, _TCHAR* argv[])
   WaitForProfilerThread();
 
   CreateGraphAndJSON(gCallTrees);
-  //CollectCallStackForDifferentProcess();
-  //TestDifferentProcess(16440);
   return 0;
 }
