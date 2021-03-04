@@ -1,62 +1,29 @@
 #include "GraphCreator.h"
+#include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <set>
 
-std::ofstream JSONFile;
-
-CallTreeNode GetBranch(std::vector<std::string> callStack)
+std::shared_ptr<CallTreeNode> GetBranch(std::vector<std::string> callStack)
 {
   // Have to DFS to check if callStack[0]] already exists. If it does, increment all its parents (?)
-  CallTreeNode* child =
-      new CallTreeNode(callStack[0], 1); // Top of the stack. Leaf of the call tree.
-  CallTreeNode* parent;
+  std::shared_ptr<CallTreeNode> child =
+      std::make_shared<CallTreeNode>(callStack[0], 1); // Top of the stack. Leaf of the call tree.
+  std::shared_ptr<CallTreeNode> parent;
 
   for (size_t i = 1; i < callStack.size(); i++)
   {
     // Set parent's count to immediate child's count.
-    parent = new CallTreeNode(callStack[i], child->count); // Set count to LeafSampleCount();
-    child->SetParent(*parent);
+    parent = std::make_shared<CallTreeNode>(callStack[i],
+                                            child->GetCount()); // Set count to LeafSampleCount();
+    //child->SetParent(*parent);
     parent->AddChild(*child);
     child = parent;
   }
 
-  return *parent;
+  return parent;
 }
-
-//CallTreeNode* CreateIfNotExists(CallTreeNode parent, std::string nodeName)
-//{
-//  // Add code for checking if node already exists.
-//  return new CallTreeNode(nodeName, 1);
-//}
-//
-//CallTreeNode* GetBranch(CallTreeNode* parent, std::vector<std::string> callStack)
-//{
-//  if (callStack.size() == 0)
-//    return NULL; // NULL?
-//  CallTreeNode* child = CreateIfNotExists(*parent, callStack[callStack.size() - 1]);
-//  callStack.pop_back();
-//  child = GetBranch(child, callStack);
-//  if (child != NULL)
-//  {
-//    child->SetCount(child->GetChildCount());
-//    return child;
-//  }
-//  else
-//    return parent;
-//}
-
-//int GetMaxListLength(std::vector<CallTreeNode> children)
-//{
-//  int max = -1;
-//
-//  for (size_t i = 0; i < children.size(); i++)
-//  {
-//    if (children[i].children.size() > max)
-//      max = children[i].children.size();
-//  }
-//  return max;
-//}
 
 int max(int a, int b)
 {
@@ -69,157 +36,87 @@ std::set<std::string> CreateSetOfChildren(std::vector<CallTreeNode> children)
 
   for (size_t i = 0; i < children.size(); i++)
   {
-    funcSet.insert(children[i].name);
+    funcSet.insert(children[i].GetName());
   }
 
   return funcSet;
 }
 
-CallTreeNode SetPercentages(CallTreeNode* root, int rootSampleCount)
+bool comparator(CallTreeNode& lhs, CallTreeNode& rhs)
 {
-  for (size_t i = 0; i < root->children.size(); i++)
-  {
-    CallTreeNode* node = &root->children[i];
-    node->percentage = (node->count / rootSampleCount) * 100.0;
-
-    *node = SetPercentages(node, rootSampleCount);
-  }
-
-  return *root;
+  return lhs.GetName() < rhs.GetName();
 }
 
-CallTreeNode MergeNodes(CallTreeNode* root)
+std::shared_ptr<CallTreeNode> MergeNodes(std::shared_ptr<CallTreeNode> root)
 {
+  std::sort((*(root->GetChildren())).begin(), (*(root->GetChildren())).end(), &comparator);
 
-  /*
-    root ---->n1->n2->n3
-           -->n1->n2->n3
-
-    Merge branches and set count on the duplicate nodes.
-    */
-
-  std::set<std::string>funcSet = CreateSetOfChildren(root->children);
-  /*std::set<std::string>::iterator itr;
-  for (itr = funcSet.begin(); itr != funcSet.end(); itr++)
+  for (int i = root->GetChildCount() - 1; i > 0; i--)
   {
-    std::cout << *itr << " ";
-  }
-  std::cout << "\n";
-  std::cout << "funcSet.size()" << funcSet.size() << "  root->children.size()"
-            << root->children.size() << "\n";*/
-
-  if (funcSet.size() != root->children.size())
-  {
-    // Merge.
-
-    std::set<std::string>::iterator iter;
-    for (iter = funcSet.begin(); iter != funcSet.end(); iter++)
+    if (((root->GetChildAt(i))->GetName()) == ((root->GetChildAt(i - 1))->GetName()))
     {
-      std::string funcName = *iter;
-      //std::vector<CallTreeNode*> mergables;
-      std::vector<int> duplicateIndices;
-
-      for (int i = 0; i < root->children.size(); i++)
+      //Merge
+      CallTreeNode* node = (root->GetChildAt(i - 1));
+      CallTreeNode* nodeToErase = root->GetChildAt(i);
+      node->SetCount((nodeToErase->GetCount()) + 1);
+      // Add children of the node that will get erased.
+      for (int j = 0; j < nodeToErase->GetChildCount(); j++)
       {
-        if (funcName == root->children[i].name)
-          duplicateIndices.push_back((int)i);
+        CallTreeNode* adoptedChild = nodeToErase->GetChildAt(j);
+        node->AddChild(*adoptedChild);
       }
-
-      //CallTreeNode* first = mergables[0];
-
-      CallTreeNode* node = &(root->children[duplicateIndices[0]]);
-      node->SetCount(max(1, (int)duplicateIndices.size()));
-
-      for (size_t i = 1; i < duplicateIndices.size(); i++)
-      {
-        // Add children of the node that will get erased.
-
-        CallTreeNode* nodeToErase = &root->children[i];
-        for (size_t j = 0; j < nodeToErase->children.size(); j++)
-        {
-          CallTreeNode* adoptedChild = &nodeToErase->children[j];
-          //adoptedChild->parents.erase()
-          adoptedChild->parents.push_back(*node);
-          node->AddChild(*adoptedChild);
-        }
-        //root->children.erase(root->children.begin() + i);
-      }
-      for (size_t i = duplicateIndices.size(); i >1; i--)
-      {
-        root->children.erase(root->children.begin() + duplicateIndices[i-1]);
-      }
-      duplicateIndices.clear();
+      root->DeleteChildAt(i);
     }
   }
-
-  for (size_t i = 0; i < root->children.size(); i++)
+  for (int i = 0; i < root->GetChildCount(); i++)
   {
     // This level has finished merging at this point. So count the number of samples.
-
-    CallTreeNode updatedNode = MergeNodes(&(root->children[i]));
-    root->children[i] = updatedNode;
+    auto updatedNode = MergeNodes(std::make_shared<CallTreeNode>(*(root->GetChildAt(i))));
+    root->SetUpdatedChildAt(i, *updatedNode);
   }
-
-  return *root;
+  return root;
 }
 
-CallTreeNode* CreateTree(std::string key, std::vector<std::vector<std::string>> values)
+std::shared_ptr<CallTreeNode> CreateTree(std::string                           key,
+                                         std::vector<std::vector<std::string>> values)
 {
-  CallTreeNode* root = new CallTreeNode(key, (int)values.size());
+  std::shared_ptr<CallTreeNode> root = std::make_shared<CallTreeNode>(key, (int)values.size());
   //std::vector<std::vector<std::string>>::iterator iter = values.begin();
   for (size_t i = 0; i < values.size(); i++)
   {
     if (values[i].size() > 0)
     {
-      auto branch = GetBranch(values[i]);
-      root->AddChild(branch); // Added * here.
+      std::shared_ptr<CallTreeNode> branch = GetBranch(values[i]);
+      root->AddChild(*branch); // Added * here.
     }
   }
 
-  // Merge nodes in branch.
-  *root = MergeNodes(root);
-
-  *root = SetPercentages(root, root->count);
+  root = MergeNodes(root);
 
   return root;
 }
 
-//void UpdateCount(CallTreeNode* node) // This is the VI.
-//{
-//  if (node->children.size() == 0) // leaf node.
-//  {
-//    node->SetCount(1);
-//    return;
-//  }
-//  for each(CallTreeNode child in(node->children)) { UpdateCount(&child); }
-//}
-//
-//void SetCount(std::vector<CallTreeNode*> forestRoot)
-//{
-//  for (size_t i = 0; i < forestRoot.size(); i++)
-//  {
-//    UpdateCount(forestRoot[i]);
-//  }
-//}
-
 void CreateGraphAndJSON(std::map<std::string, std::vector<std::vector<std::string>>> callTrees)
 {
-  std::vector<CallTreeNode*>                                             forest;
+  std::vector<CallTreeNode>                                              forest;
   std::map<std::string, std::vector<std::vector<std::string>>>::iterator iter = callTrees.begin();
 
-  JSONFile.open("C:\\temp\\JSON.json", std::ios ::app);
+  std::ofstream JSONFile;
+
+  JSONFile.open("C:\\temp\\JSON.json", std::ios ::trunc);
 
   JSONFile << "[";
   while (iter != callTrees.end())
   {
     std::string                           key = iter->first;
     std::vector<std::vector<std::string>> value = iter->second;
-    CallTreeNode*                         tree = CreateTree(key, value);
-    tree->percentage = (tree->count / (int)callTrees.size()) * 100.0;
-    forest.push_back(tree);
+    std::shared_ptr<CallTreeNode>         tree = CreateTree(key, value);
+    //(&tree)->percentage = (tree.count / (int)callTrees.size()) * 100.0;
+    forest.push_back(*tree);
 
-    std::string JSON = tree->SerialiseToJSON();
+    std::string JSON = (*tree).SerialiseToJSON();
 
+    //delete tree;
     JSONFile << JSON;
 
     iter++;

@@ -46,11 +46,11 @@
 #if _MSC_VER >= 1900
 #pragma warning(disable : 4091)
 #endif
+#include <fstream>
+#include <map>
 #include <set>
 #include <stack>
 #include <vector>
-#include <map>
-#include <fstream>
 
 // special defines for VC5/6 (if no actual PSDK is installed):
 #if _MSC_VER < 1300
@@ -60,8 +60,8 @@ typedef unsigned __int64 SIZE_T, *PSIZE_T;
 #else
 typedef unsigned long SIZE_T, *PSIZE_T;
 #endif
-#endif // _MSC_VER < 1300
-           // Call tree code:
+#endif // _MSC_VER < 1300 \
+       // Call tree code:
 
 //class CallTreeNode // Should be private. TODO
 //{
@@ -151,13 +151,13 @@ public:
   BOOL ShowObject(LPVOID pObject);
 
   //CallTreeNode                       callTree;
-  static std::set<std::string, int> createdNodes;
+  //static std::set<std::string, int> createdNodes;
   //void                       AddToCallTree(char* name);
 
-  std::stack<std::string> callStack;
+  //std::stack<std::string> callStack;
   std::vector<std::string> callStackList;
   //static std::map<std::string, std::vector<std::vector<std::string>>> callTrees;
-  std::ofstream gLogFile;
+  //std::ofstream gLogFile;
 
 #if _MSC_VER >= 1300
   // due to some reasons, the "STACKWALK_MAX_NAMELEN" must be declared as "public"
